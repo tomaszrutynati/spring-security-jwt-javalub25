@@ -3,13 +3,13 @@ package pl.sda.springsecurityjwtjavalub25.config;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jdk.nashorn.internal.parser.Token;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import pl.sda.springsecurityjwtjavalub25.repository.TokenRepository;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -21,10 +21,13 @@ import java.util.Collections;
 public class TokenAuthorizationFilter extends BasicAuthenticationFilter {
 
     private final ObjectMapper objectMapper;
+    private final TokenRepository tokenRepository;
 
-    public TokenAuthorizationFilter(AuthenticationManager authenticationManager, ObjectMapper objectMapper) {
+    public TokenAuthorizationFilter(AuthenticationManager authenticationManager, ObjectMapper objectMapper,
+                                    TokenRepository tokenRepository) {
         super(authenticationManager);
         this.objectMapper = objectMapper;
+        this.tokenRepository = tokenRepository;
     }
 
     @Override
@@ -43,10 +46,12 @@ public class TokenAuthorizationFilter extends BasicAuthenticationFilter {
         if (subjectJson != null && !subjectJson.isEmpty()) {
             TokenSubject subject = objectMapper.readValue(subjectJson, TokenSubject.class);
 
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(subject.getUsername(), null,
-                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + subject.getRole())));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            if (tokenRepository.findByUsername(subject.getUsername()).isPresent()) {
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(subject.getUsername(), null,
+                                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + subject.getRole())));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
 
         chain.doFilter(request, response);

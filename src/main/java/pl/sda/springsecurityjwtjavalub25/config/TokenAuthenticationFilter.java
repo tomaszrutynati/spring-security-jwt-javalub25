@@ -11,6 +11,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import pl.sda.springsecurityjwtjavalub25.api.model.LoginRq;
+import pl.sda.springsecurityjwtjavalub25.repository.TokenEntity;
+import pl.sda.springsecurityjwtjavalub25.repository.TokenRepository;
 import pl.sda.springsecurityjwtjavalub25.repository.UserRepository;
 
 import javax.servlet.FilterChain;
@@ -18,6 +20,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @RequiredArgsConstructor
@@ -26,6 +30,7 @@ public class TokenAuthenticationFilter extends UsernamePasswordAuthenticationFil
     private final AuthenticationManager authenticationManager;
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
+    private final TokenRepository tokenRepository;
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
@@ -55,10 +60,21 @@ public class TokenAuthenticationFilter extends UsernamePasswordAuthenticationFil
                 .withSubject(objectMapper.writeValueAsString(subject))
                 .withExpiresAt(new Date(System.currentTimeMillis() + 3_600_000))
                 .sign(Algorithm.HMAC512("Javalub25".getBytes()));
+        storeTokenInfo(username);
+
         //Wybierz jedno miejsce gdzie będziesz chciał mieć token
         //1
         response.setHeader("TOKEN", token);
         //2
         response.getOutputStream().write(token.getBytes());
+    }
+
+    private void storeTokenInfo(String username) {
+        tokenRepository.deleteByUsername(username);
+
+        tokenRepository.save(TokenEntity.builder()
+                .username(username)
+                .tokenValidTo(LocalDateTime.now().plusHours(1))
+                .build());
     }
 }
