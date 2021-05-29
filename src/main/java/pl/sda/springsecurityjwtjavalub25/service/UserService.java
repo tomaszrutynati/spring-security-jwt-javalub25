@@ -11,8 +11,8 @@ import pl.sda.springsecurityjwtjavalub25.repository.UserRepository;
 @RequiredArgsConstructor
 public class UserService {
 
-    private UserRepository userRepository;
-    private PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public void registerUser(NewUserRq rq) {
         if (userRepository.findByUsername(rq.getUsername()).isPresent()) {
